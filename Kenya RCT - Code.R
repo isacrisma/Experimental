@@ -179,8 +179,10 @@ ggplot(Names, aes(x = Education)) +
 gender.mean_land <- t(tapply(Data_Kenya$LandSize,
                         list(Data_Kenya$Treatment, Data_Kenya$Gender), mean))
 
-barplot(gender.mean_land, col=c("#FF4500", "#FFA500","#FFD700"), beside=TRUE, 
-        xlab = "Group", ylab = "Frequency", legend=rownames(gender.mean_land))
+par(mar = c(5, 5, 3.5, 5))
+barplot(gender.mean_land, col=c("#FF4500", "#FFA500","#FFD700"), beside=TRUE, names.arg=c("Control","Treatment","Omitted"),
+        xlab = "Group", ylab = "Mean Land Size (sqm)", legend=c("Male","Female","Diverse"),
+        args.legend=list(title="Gender", x = "topright", bty="n", xpd = TRUE, inset=c(-0.45,0)))
 
 ## 2. Gender & Legal (Table) --> Maybe not necessary, doesn't say much
 
@@ -196,78 +198,37 @@ Belief <- Data_Kenya %>%
   summarise(n = n()) %>%
   mutate(freq = n / sum(n))
 
-## 4. Education & Belief Fodder (Table)
+Names_Belief <- Belief %>%
+  mutate(Treatment = recode(Treatment, "1" = "Treatment", "0" = "Control", "3" = "Omitted"))
+
+ggplot(Names_Belief, aes(fill=factor(BeliefFodder), y=freq, x=Treatment)) + 
+  geom_bar(position="stack", stat="identity") + 
+  scale_fill_manual(values = c("#FF8C00", "#FFA500","#FFD700","#B8860B"), labels = c("1", "2", "3","4")) +
+  labs(x = "Group", y = "Proportion", fill = "Belief Fodder") + facet_grid(.~Treatment, scales="free") +
+  theme(axis.text.x = element_blank(),axis.ticks.x = element_blank()) +   
+  scale_y_continuous(expand = expansion(mult = c(0, .1)))
+
+
+## 4. Education & Belief Fodder (Table) --> Maybe not necessary. Can't imply that it has to do with education
 
 Education_Belief <- Data_Kenya %>%
   group_by(Education,BeliefFodder) %>%
   summarise(n = n()) %>%
   mutate(freq = n / sum(n))
 
-## 4. Education & Already Fodder (Table)
+## 5. Education & Already Fodder (Table)
 
 Education_Already <- Data_Kenya %>%
   group_by(Education, AlreadyFodder) %>%
   summarise(n = n()) %>%
   mutate(freq = n / sum(n))
 
-ggplot(Data_Kenya, aes(x = LandSize)) +
-  geom_histogram(fill = "white", colour = "black", bins = 15, binwidth = 3000) +
-  facet_grid(Treatment ~ .)
+## 6. Education & Already Fodder (Box Plot)
+Names_Educ_Belief <- Data_Kenya %>%
+  mutate(AlreadyFodder = recode(AlreadyFodder, "1" = "Already Fodder", "0" = "No Fodder"))
 
-
-############ Failures 
-
-a <- ggplot(Data_Kenya, aes(x = Workers))
-
-a + geom_histogram(aes(color = Treatment), bins = 30,
-                   position = "identity") +
-  scale_color_manual(values = c("#00AFBB", "#E7B800"))
-
-ggplot(Data_Kenya, aes(x=Workers, fill=Treatment)) +
-  geom_histogram(alpha = 0.7, position="dodge")
-
-library(ggplot2)
-ggplot(Data_Kenya, aes(x = Workers)) +
-  geom_histogram(fill = "white", colour = "black", bins = 5, binwidth = 5) +
-  facet_grid(Treatment ~ .)
-
-library(lattice)
-stripplot(Data_Kenya$Workers ~ Data_Kenya$Treatment, 
-          ylim = c(0, 100),
-jitter=T)
-
-
-library(dplyr)
-library(tidyr)
-test <- Data_Kenya %>% 
-  group_by(Treatment, Legal) %>% 
-  tally() %>% 
-  complete(Legal, fill = list(n = 0)) %>% 
-  mutate(percentage = n / sum(n) * 100)
-
-ggplot(test, aes(Legal, percentage, fill = Treatment)) + 
-  geom_bar(stat = 'identity', position = 'dodge') +
-  theme_bw()
-
-library(dplyr)
-
-ggplot(Data_Kenya, aes(fill=BeliefFodder, y=BeliefFodder, x=Treatment)) + 
-  geom_bar(position="stack", stat="identity")
-
-pcentFun <- function(x) {
-  res <- x > 0
-  100 * (sum(res) / length(res))
-}
-
-gender.mean_legal <- t(tapply(Data_Kenya$Legal,
-                              list(Data_Kenya$Treatment, Data_Kenya$Gender), 
-                              pcentFun))
-
-barplot(gender.mean_legal, col=c("darkblue","red"), beside=TRUE, legend=rownames(gender.mean_legal))
-
-
-Gender_Belief <- Data_Kenya %>%
-  group_by(Treatment, BeliefFodder,Gender) %>%
-  summarise(n = n()) %>%
-  mutate(freq = n / sum(n))
-
+ggplot(Names_Educ_Belief, aes(factor(AlreadyFodder), Education, fill = AlreadyFodder)) + geom_boxplot() +
+  geom_jitter(width = 0.009, cex=0.02) + stat_summary(fun=mean, geom="point", shape=18,
+                                                      size=3, color="red") + 
+  labs(x = "Already Fodder", y ="Years of Education") + scale_fill_manual( values=c("#FFA500", "#FFD700")) +
+  theme(legend.position="none")
